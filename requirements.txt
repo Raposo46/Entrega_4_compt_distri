@@ -1,0 +1,9 @@
+# Orquestração, medição e relatórios (rodam no host)
+locust>=2.29
+pandas>=2.0
+openpyxl>=3.1
+matplotlib>=3.8
+
+# Só para rodar a API Python fora do Docker em testes locais (opcional)
+# flask  requests  beautifulsoup4  lxml  redis  waitress
+

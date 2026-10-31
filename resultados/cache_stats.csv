@@ -1,0 +1,7 @@
+executado_em,linguagem,nivel,usuarios,cache_inicio,hits,misses,taxa_acerto_pct,chaves_no_redis
+2026-10-30T22:19:22,python,U1,63,frio,8390,31,99.63,10
+2026-10-30T22:20:16,python,U2,67,frio,8999,40,99.56,10
+2026-10-30T22:21:11,python,U3,70,frio,9364,51,99.46,10
+2026-10-30T22:25:16,ruby,U1,63,frio,3636,44,98.8,10
+2026-10-30T22:26:10,ruby,U2,67,frio,3642,48,98.7,10
+2026-10-30T22:27:04,ruby,U3,70,frio,3646,46,98.75,10

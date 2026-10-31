@@ -1,0 +1,6 @@
+Method,Name,Error,Occurrences,First Seen,Last Seen
+GET,04 www.php.net/,CatchResponseError('HTTP 0'),16,2026-10-31T01:11:55Z,2026-10-31T01:12:09Z
+GET,02 www.python.org/,CatchResponseError('HTTP 0'),7,2026-10-31T01:11:52Z,2026-10-31T01:11:53Z
+GET,03 www.ruby-lang.org/en/,CatchResponseError('HTTP 0'),9,2026-10-31T01:11:52Z,2026-10-31T01:12:01Z
+GET,05 www.sqlite.org/index.html,CatchResponseError('HTTP 0'),2,2026-10-31T01:11:55Z,2026-10-31T01:11:55Z
+GET,06 docs.python.org/3/,CatchResponseError('HTTP 0'),2,2026-10-31T01:11:53Z,2026-10-31T01:11:54Z

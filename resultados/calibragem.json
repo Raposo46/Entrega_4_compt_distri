@@ -1,0 +1,63 @@
+{
+  "gerado_em": "2026-10-30T22:15:20",
+  "teto_perda_pct": 10.0,
+  "faixas_pct": {
+    "U1": [
+      0.5,
+      2.2
+    ],
+    "U2": [
+      3.0,
+      5.5
+    ],
+    "U3": [
+      7.0,
+      9.5
+    ]
+  },
+  "tempo_calibracao_s": 45,
+  "timeout_cliente_s": 8.0,
+  "linguagem_referencia": "python",
+  "usuarios": [
+    63,
+    67,
+    70
+  ],
+  "por_linguagem": {
+    "python": {
+      "usuarios": [
+        63,
+        67,
+        70
+      ],
+      "dentro_da_faixa": [
+        true,
+        false,
+        true
+      ],
+      "perda_calibragem_pct": {
+        "63": 1.18,
+        "67": 6.47,
+        "70": 7.01
+      },
+      "medicoes": {
+        "20": 0.0,
+        "32": 0.0,
+        "51": 0.0,
+        "63": 1.18,
+        "64": 0.85,
+        "65": 7.08,
+        "67": 6.47,
+        "70": 7.01,
+        "82": 33.03
+      }
+    },
+    "ruby_sondagem": {
+      "u3_testado": 70,
+      "perda_pct": 6.89,
+      "medicoes": {
+        "70": 6.89
+      }
+    }
+  }
+}

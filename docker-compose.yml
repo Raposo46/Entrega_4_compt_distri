@@ -1,0 +1,133 @@
+name: linkextractor-t4
+
+# Trabalho 4 - Link Extractor (baseado nas etapas step4/step5/step6 de ibnesayeed/linkextractor).
+#
+# Orquestra as 4 combinações arquiteturais exigidas por meio de perfis do Docker Compose
+# (apenas 1 perfil sobe por vez para evitar disputa de recursos durante os testes de carga):
+#
+#   1) Python SEM Cache: docker compose --profile python-sem-cache up -d --build --wait
+#   2) Python COM Cache: docker compose --profile python-com-cache up -d --build --wait
+#   3) Ruby SEM Cache:   docker compose --profile ruby-sem-cache   up -d --build --wait
+#   4) Ruby COM Cache:   docker compose --profile ruby-com-cache   up -d --build --wait
+#   Derrubar ambiente:   docker compose --profile "*" down
+#
+# Endpoints expostos:
+#   - API de extração (Python ou Ruby): http://localhost:5000/api/<url>
+#   - Front-end Web em PHP:             http://localhost:8080/?url=<url>
+
+x-api: &api
+  ports:
+    - "${API_PORT:-5000}:5000"
+  # 1,0 vCPU por container de API: garante paridade justa entre Python e Ruby e faz a
+  # saturação ocorrer de forma controlada e reprodutível antes que o Locust vire gargalo.
+  cpus: ${API_CPUS:-1.0}
+  environment: &api-env
+    WORKERS: ${API_WORKERS:-2}
+    THREADS: ${API_THREADS:-8}
+    CONNECT_TIMEOUT: ${CONNECT_TIMEOUT:-3}
+    REQUEST_TIMEOUT: ${REQUEST_TIMEOUT:-5}
+    CACHE_TTL: ${CACHE_TTL:-3600}
+
+x-healthcheck-python: &hc-python
+  test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/health', timeout=3)"]
+  interval: 3s
+  timeout: 5s
+  retries: 40
+
+x-healthcheck-ruby: &hc-ruby
+  test: ["CMD", "ruby", "-rnet/http", "-e", "Net::HTTP.get_response(URI('http://127.0.0.1:5000/health')).value"]
+  interval: 3s
+  timeout: 5s
+  retries: 40
+
+x-redis-wait: &redis-wait
+  redis:
+    condition: service_healthy
+
+services:
+  # -------------------------------------------------------- 1) Python SEM Cache
+  api-python-sem-cache:
+    <<: *api
+    build: ./api-python
+    image: le-api-python:t4
+    profiles: ["python-sem-cache"]
+    environment:
+      <<: *api-env
+      CACHE_ENABLED: "false"
+    healthcheck: *hc-python
+    networks:
+      default:
+        aliases: [api]
+
+  # -------------------------------------------------------- 2) Python COM Cache
+  api-python-com-cache:
+    <<: *api
+    build: ./api-python
+    image: le-api-python:t4
+    profiles: ["python-com-cache"]
+    depends_on: *redis-wait
+    environment:
+      <<: *api-env
+      CACHE_ENABLED: "true"
+      REDIS_URL: redis://redis:6379/0
+    healthcheck: *hc-python
+    networks:
+      default:
+        aliases: [api]
+
+  # ---------------------------------------------------------- 3) Ruby SEM Cache
+  api-ruby-sem-cache:
+    <<: *api
+    build: ./api-ruby
+    image: le-api-ruby:t4
+    profiles: ["ruby-sem-cache"]
+    environment:
+      <<: *api-env
+      CACHE_ENABLED: "false"
+    healthcheck: *hc-ruby
+    networks:
+      default:
+        aliases: [api]
+
+  # ---------------------------------------------------------- 4) Ruby COM Cache
+  api-ruby-com-cache:
+    <<: *api
+    build: ./api-ruby
+    image: le-api-ruby:t4
+    profiles: ["ruby-com-cache"]
+    depends_on: *redis-wait
+    environment:
+      <<: *api-env
+      CACHE_ENABLED: "true"
+      REDIS_URL: redis://redis:6379/0
+    healthcheck: *hc-ruby
+    networks:
+      default:
+        aliases: [api]
+
+  # -------------------------------------------------------------- Cache (Redis)
+  redis:
+    image: redis:7-alpine
+    profiles: ["python-com-cache", "ruby-com-cache"]
+    command: ["redis-server", "--save", "", "--appendonly", "no", "--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+
+  # -------------------------------------------------------- Front-end Web (PHP)
+  web:
+    build: ./web
+    image: le-web:t4
+    profiles: ["python-sem-cache", "python-com-cache", "ruby-sem-cache", "ruby-com-cache"]
+    ports:
+      - "${WEB_PORT:-8080}:80"
+    environment:
+      API_ENDPOINT: http://api:5000/api/
+      API_URL: http://api:5000
+    healthcheck:
+      test: ["CMD", "php", "-r", "exit(@file_get_contents('http://127.0.0.1/?health') ? 0 : 1);"]
+      interval: 3s
+      timeout: 5s
+      retries: 20

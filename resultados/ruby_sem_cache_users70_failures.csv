@@ -1,0 +1,11 @@
+Method,Name,Error,Occurrences,First Seen,Last Seen
+GET,04 www.php.net/,CatchResponseError('HTTP 0'),40,2026-10-31T01:23:54Z,2026-10-31T01:23:59Z
+GET,08 www.apache.org/,CatchResponseError('HTTP 504'),1,2026-10-31T01:23:31Z,2026-10-31T01:23:31Z
+GET,02 www.python.org/,CatchResponseError('HTTP 0'),40,2026-10-31T01:23:38Z,2026-10-31T01:23:43Z
+GET,03 www.ruby-lang.org/en/,CatchResponseError('HTTP 0'),40,2026-10-31T01:23:46Z,2026-10-31T01:23:51Z
+GET,02 www.python.org/,CatchResponseError('HTTP 504'),1,2026-10-31T01:23:38Z,2026-10-31T01:23:38Z
+GET,04 www.php.net/,CatchResponseError('HTTP 504'),8,2026-10-31T01:23:25Z,2026-10-31T01:23:57Z
+GET,10 www.debian.org/,CatchResponseError('HTTP 504'),1,2026-10-31T01:23:58Z,2026-10-31T01:23:58Z
+GET,01 www.iana.org/,CatchResponseError('HTTP 0'),40,2026-10-31T01:23:30Z,2026-10-31T01:23:34Z
+GET,05 www.sqlite.org/index.html,CatchResponseError('HTTP 0'),1,2026-10-31T01:24:03Z,2026-10-31T01:24:03Z
+GET,01 www.iana.org/,CatchResponseError('HTTP 504'),1,2026-10-31T01:23:48Z,2026-10-31T01:23:48Z

@@ -1,0 +1,5 @@
+Method,Name,Error,Occurrences,First Seen,Last Seen
+GET,04 www.php.net/,CatchResponseError('HTTP 0'),26,2026-10-31T01:25:08Z,2026-10-31T01:25:11Z
+GET,02 www.python.org/,CatchResponseError('HTTP 0'),26,2026-10-31T01:24:51Z,2026-10-31T01:24:54Z
+GET,03 www.ruby-lang.org/en/,CatchResponseError('HTTP 0'),26,2026-10-31T01:24:59Z,2026-10-31T01:25:02Z
+GET,01 www.iana.org/,CatchResponseError('HTTP 0'),26,2026-10-31T01:24:43Z,2026-10-31T01:24:46Z

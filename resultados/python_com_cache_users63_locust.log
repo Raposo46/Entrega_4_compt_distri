@@ -1,0 +1,37 @@
+[2026-10-30 22:18:37,486] DESKTOP-33ABQ35/INFO/locust.main: Starting Locust 2.47.0
+[2026-10-30 22:18:37,487] DESKTOP-33ABQ35/INFO/locust.main: Run time limit set to 45 seconds
+[2026-10-30 22:18:37,488] DESKTOP-33ABQ35/INFO/locust.runners: Ramping to 63 users at a rate of 7.88 per second
+[2026-10-30 22:18:44,646] DESKTOP-33ABQ35/INFO/locust.runners: All users spawned: {"UsuarioLinkExtractor": 63} (63 total users)
+[2026-10-30 22:19:22,082] DESKTOP-33ABQ35/INFO/locust.main: --run-time limit reached, shutting down
+[2026-10-30 22:19:22,264] DESKTOP-33ABQ35/INFO/locust.main: Shutting down (exit code 0)
+Type     Name                                                                          # reqs      # fails |    Avg     Min     Max    Med |   req/s  failures/s
+--------|----------------------------------------------------------------------------|-------|-------------|-------|-------|-------|-------|--------|-----------
+GET      01 www.iana.org/                                                                 869     0(0.00%) |      3       0      74      2 |   19.44        0.00
+GET      02 www.python.org/                                                               865     0(0.00%) |      2       0      41      2 |   19.35        0.00
+GET      03 www.ruby-lang.org/en/                                                         856     0(0.00%) |      2       0     107      2 |   19.15        0.00
+GET      04 www.php.net/                                                                  849     0(0.00%) |      2       0      58      2 |   18.99        0.00
+GET      05 www.sqlite.org/index.html                                                     843     0(0.00%) |      4       0     669      2 |   18.86        0.00
+GET      06 docs.python.org/3/                                                            837     0(0.00%) |      2       0      29      2 |   18.72        0.00
+GET      07 curl.se/                                                                      832     0(0.00%) |      2       0     107      2 |   18.61        0.00
+GET      08 www.apache.org/                                                               825     0(0.00%) |      2       0     107      2 |   18.46        0.00
+GET      09 www.kernel.org/                                                               817     0(0.00%) |      2       0      28      2 |   18.28        0.00
+GET      10 www.debian.org/                                                               809     0(0.00%) |      2       0     201      2 |   18.10        0.00
+--------|----------------------------------------------------------------------------|-------|-------------|-------|-------|-------|-------|--------|-----------
+         Aggregated                                                                      8402     0(0.00%) |      2       0     669      2 |  187.96        0.00
+
+Response time percentiles (approximated)
+Type     Name                                                                                  50%    66%    75%    80%    90%    95%    98%    99%  99.9% 99.99%   100% # reqs
+--------|--------------------------------------------------------------------------------|--------|------|------|------|------|------|------|------|------|------|------|------
+GET      01 www.iana.org/                                                                        2      2      3      3      4      6      8     19     74     74     74    869
+GET      02 www.python.org/                                                                      2      3      3      3      4      4      5      7     41     41     41    865
+GET      03 www.ruby-lang.org/en/                                                                2      2      3      3      3      4      5      6    110    110    110    856
+GET      04 www.php.net/                                                                         2      3      3      3      4      4      5      5     58     58     58    849
+GET      05 www.sqlite.org/index.html                                                            2      3      3      3      3      4      5      6    670    670    670    843
+GET      06 docs.python.org/3/                                                                   2      2      3      3      4      4      5      6     29     29     29    837
+GET      07 curl.se/                                                                             2      3      3      3      3      4      5      5    110    110    110    832
+GET      08 www.apache.org/                                                                      2      3      3      3      4      4      5      5    110    110    110    825
+GET      09 www.kernel.org/                                                                      2      3      3      3      4      4      5      6     29     29     29    817
+GET      10 www.debian.org/                                                                      2      2      3      3      3      4      5      6    200    200    200    809
+--------|--------------------------------------------------------------------------------|--------|------|------|------|------|------|------|------|------|------|------|------
+         Aggregated                                                                              2      3      3      3      4      4      5      6    110    670    670   8402
+
