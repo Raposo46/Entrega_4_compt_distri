@@ -1,15 +1,20 @@
 #!/usr/bin/env python3
-"""Geração de gráficos em alta resolução para o Google Slides - Trabalho 4 (Link Extractor).
+"""Geração de gráficos de barras em alta resolução para o Google Slides - Trabalho 4 (Link Extractor).
 
-Lê `resultados/tabela_consolidada_trabalho4.csv` e gera na pasta `graficos/` (formato 16:9, 220 DPI):
+Lê `resultados/tabela_consolidada_trabalho4.csv` (e `resultados/calibragem.json`) e gera na pasta `graficos/`
+(formato widescreen 16:9, 220 DPI), todos em GRÁFICOS DE BARRAS conforme exigido pelo professor:
   1. 01_tempo_resposta_media_mediana.png     -> Média e Mediana: Python vs Ruby (Sem vs Com Cache)
   2. 02_percentis_painel_comparativo.png     -> Painel consolidado p50/p90/p95/p99 nos 3 níveis U1, U2, U3
      02_percentis_U1.png / U2.png / U3.png   -> Percentis detalhados por nível de carga
   3. 03_vazao_rps.png                        -> Vazão (Requests/s) com destaque do ganho com Redis
-  4. 04_taxa_perda.png                       -> Taxa de Perda (%) comprovando o limite <= 10%
+  4. 04_taxa_perda.png                       -> Taxa de Perda (%) + contagem (falhas/total) e teto de 10%
+  5. 05_falhas_absolutas_e_sucessos.png      -> Barras de Falhas Absolutas + Barras Empilhadas (Sucessos vs. Falhas)
+  6. 06_calibragem_barras.png                -> Barras da Calibragem Empírica destacando U1, U2, U3 e o teto de 10%
 """
 
 import argparse
+import csv
+import json
 import sys
 from pathlib import Path
 
@@ -17,6 +22,8 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
+from matplotlib.lines import Line2D  # noqa: E402
+from matplotlib.patches import Patch  # noqa: E402
 import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 
@@ -314,27 +321,277 @@ def grafico_vazao(df: pd.DataFrame, saida: Path):
 
 
 def grafico_perda(df: pd.DataFrame, saida: Path, teto: float = 10.0):
+    """Gráfico de barras de Taxa de Perda (%) por nível (U1, U2, U3) e arquitetura,
+    exibindo tanto a porcentagem quanto a contagem absoluta (falhas/total) em cada barra."""
     niveis = sorted(df["Nível"].unique())
     rotulos = [rotulo_nivel(df)[n] for n in niveis]
     fig, ax = plt.subplots(figsize=TAMANHO_SLIDE)
-    barras_agrupadas(ax, niveis, rotulos, df, "Nível", "% de Perda", log=False, sufixo="%", fonte_valor=9.5)
-    ax.axhline(teto, color="#c0392b", linestyle="--", linewidth=2.2)
+
+    largura = 0.20
+    x = np.arange(len(niveis))
+    max_pct = teto
+    for i, (lang, cache, cor, hachura) in enumerate(SERIES):
+        valores_pct = [valor(df, lang, cache, "Nível", n, "% de Perda") for n in niveis]
+        valores_falhas = [valor(df, lang, cache, "Nível", n, "Falhas") for n in niveis]
+        valores_total = [valor(df, lang, cache, "Nível", n, "Total de Requisições") for n in niveis]
+        posicoes = x + (i - 1.5) * largura
+        barras = ax.bar(
+            posicoes,
+            valores_pct,
+            largura * 0.94,
+            label=f"{lang} – {cache}",
+            color=cor,
+            hatch=hachura,
+            edgecolor="white",
+            linewidth=0.8,
+        )
+        for barra, pct, falhas, total in zip(barras, valores_pct, valores_falhas, valores_total):
+            if not np.isnan(pct):
+                max_pct = max(max_pct, pct)
+                f_int = int(falhas) if not np.isnan(falhas) else 0
+                t_int = int(total) if not np.isnan(total) else 0
+                texto = f"{formatar(pct)}%\n({f_int}/{t_int})" if f_int > 0 else "0,00%\n(0 falhas)"
+                ax.annotate(
+                    texto,
+                    (barra.get_x() + barra.get_width() / 2.0, barra.get_height()),
+                    ha="center",
+                    va="bottom",
+                    fontsize=8.6,
+                    fontweight="bold",
+                    xytext=(0, 3),
+                    textcoords="offset points",
+                )
+
+    topo = max(teto * 1.28, max_pct * 1.22)
+    ax.axhline(teto, color="#c0392b", linestyle="--", linewidth=2.2, zorder=3)
+    ax.axhspan(teto, topo, color="#c0392b", alpha=0.06, zorder=1)
     ax.annotate(
         f"Limite Máximo Exigido pelo Professor: {teto:.0f}% de Perda",
         (ax.get_xlim()[0] + 0.05, teto),
-        xytext=(4, 6),
+        xytext=(4, 7),
         textcoords="offset points",
         color="#c0392b",
         fontsize=11.5,
         fontweight="bold",
     )
-    ax.set_ylim(0, max(teto * 1.25, ax.get_ylim()[1]))
+    ax.set_xticks(x)
+    ax.set_xticklabels(rotulos)
+    ax.set_ylim(0, topo)
     ax.set_xlabel("Nível de Carga Calibrado")
     ax.set_ylabel("Taxa de Perda / Falhas (%)")
-    ax.set_title("Link Extractor: Taxa de Perda (%) — Calibragem Empírica Respeitando o Teto de 10%")
+    ax.set_title("Link Extractor: Taxa de Perda (%) e Contagem de Falhas — Calibragem ≤ 10%")
     fig.tight_layout(rect=(0, 0.05, 1, 1))
     legenda_inferior(fig, ax)
     salvar(fig, saida / "04_taxa_perda.png")
+
+
+def grafico_falhas_absolutas_e_sucessos(df: pd.DataFrame, saida: Path):
+    """Painel duplo de gráficos de barras dedicados às falhas por nível (U1, U2, U3) e arquitetura:
+    - Esquerda: Quantidade absoluta de requisições com falha (barras agrupadas com 'N falhas (X,XX%)')
+    - Direita:  Barras empilhadas de Requisições com Sucesso vs. Requisições com Falha (volume total)
+    """
+    niveis = sorted(df["Nível"].unique())
+    rotulos = [rotulo_nivel(df)[n] for n in niveis]
+    fig, (ax_abs, ax_emp) = plt.subplots(1, 2, figsize=(15.5, 7.5))
+
+    largura = 0.20
+    x = np.arange(len(niveis))
+
+    # --- Painel 1: Quantidade Absoluta de Falhas ---
+    max_falhas = 1.0
+    for i, (lang, cache, cor, hachura) in enumerate(SERIES):
+        falhas = [valor(df, lang, cache, "Nível", n, "Falhas") for n in niveis]
+        pcts = [valor(df, lang, cache, "Nível", n, "% de Perda") for n in niveis]
+        posicoes = x + (i - 1.5) * largura
+        barras = ax_abs.bar(
+            posicoes,
+            falhas,
+            largura * 0.94,
+            label=f"{lang} – {cache}",
+            color=cor,
+            hatch=hachura,
+            edgecolor="white",
+            linewidth=0.8,
+        )
+        for barra, f_val, p_val in zip(barras, falhas, pcts):
+            if not np.isnan(f_val):
+                max_falhas = max(max_falhas, f_val)
+                f_int = int(f_val)
+                rotulo_barra = f"{f_int}\n({formatar(p_val)}%)" if f_int > 0 else "0\n(0%)"
+                ax_abs.annotate(
+                    rotulo_barra,
+                    (barra.get_x() + barra.get_width() / 2.0, barra.get_height()),
+                    ha="center",
+                    va="bottom",
+                    fontsize=8.2,
+                    fontweight="bold",
+                    xytext=(0, 3),
+                    textcoords="offset points",
+                )
+
+    ax_abs.set_xticks(x)
+    ax_abs.set_xticklabels(rotulos)
+    ax_abs.set_ylim(0, max_falhas * 1.24)
+    ax_abs.set_xlabel("Nível de Carga Calibrado")
+    ax_abs.set_ylabel("Quantidade de Requisições com Falha")
+    ax_abs.set_title("Quantidade Absoluta de Falhas (e % de Perda)")
+
+    # --- Painel 2: Barras Empilhadas (Sucessos vs. Falhas no Total de Requisições) ---
+    max_total = 1.0
+    for i, (lang, cache, cor, hachura) in enumerate(SERIES):
+        totais = [valor(df, lang, cache, "Nível", n, "Total de Requisições") for n in niveis]
+        falhas = [valor(df, lang, cache, "Nível", n, "Falhas") for n in niveis]
+        sucessos = [max(0.0, t - f) for t, f in zip(totais, falhas)]
+        posicoes = x + (i - 1.5) * largura
+
+        ax_emp.bar(
+            posicoes,
+            sucessos,
+            largura * 0.94,
+            color=cor,
+            hatch=hachura,
+            alpha=0.88,
+            edgecolor="white",
+            linewidth=0.8,
+            label=f"{lang} – {cache} (Sucessos)",
+        )
+        barras_topo = ax_emp.bar(
+            posicoes,
+            falhas,
+            largura * 0.94,
+            bottom=sucessos,
+            color="#d93829",
+            edgecolor="white",
+            linewidth=0.8,
+            label="Falhas (Timeout / Erro HTTP)" if i == 0 else None,
+        )
+        for barra, t_val, f_val in zip(barras_topo, totais, falhas):
+            if not np.isnan(t_val):
+                max_total = max(max_total, t_val)
+                t_int, f_int = int(t_val), int(f_val)
+                texto_emp = f"{t_int:,}".replace(",", ".") + f"\n({f_int} err)" if f_int > 0 else f"{t_int:,}".replace(",", ".") + "\n(0 err)"
+                ax_emp.annotate(
+                    texto_emp,
+                    (barra.get_x() + barra.get_width() / 2.0, t_val),
+                    ha="center",
+                    va="bottom",
+                    fontsize=7.2,
+                    fontweight="bold",
+                    xytext=(0, 3),
+                    textcoords="offset points",
+                )
+
+    ax_emp.set_xticks(x)
+    ax_emp.set_xticklabels(rotulos)
+    ax_emp.set_ylim(0, max_total * 1.24)
+    ax_emp.set_xlabel("Nível de Carga Calibrado")
+    ax_emp.set_ylabel("Volume Total de Requisições (Sucessos + Falhas)")
+    ax_emp.set_title("Sucessos vs. Falhas (Barras Empilhadas)")
+
+    fig.suptitle(
+        "Link Extractor: Falhas em Quantidade Absoluta e Proporção Sucessos vs. Falhas por Nível (U1, U2, U3)",
+        fontsize=16.5,
+        fontweight="bold",
+        y=1.01,
+    )
+    fig.tight_layout(rect=(0, 0.06, 1, 0.97))
+
+    handles, nomes = ax_abs.get_legend_handles_labels()
+    handles.append(Patch(facecolor="#d93829", edgecolor="white", label="Topo Vermelho = Requisições com Falha"))
+    nomes.append("Topo Vermelho = Requisições com Falha")
+    fig.legend(handles, nomes, loc="lower center", ncol=5, frameon=False, bbox_to_anchor=(0.5, -0.01))
+    salvar(fig, saida / "05_falhas_absolutas_e_sucessos.png")
+
+
+def _ler_falhas_calibragem(pasta_resultados: Path, lang: str, u: int) -> tuple[int, int]:
+    """Retorna (falhas, total) do CSV bruto da calibragem, se existir."""
+    arq = pasta_resultados / "calibragem" / f"{lang}_sem_cache_users{u}_stats.csv"
+    if not arq.exists():
+        return (0, 0)
+    with open(arq, newline="", encoding="utf-8") as f:
+        for linha in csv.DictReader(f):
+            if linha.get("Name") == "Aggregated":
+                return (int(linha["Failure Count"]), int(linha["Request Count"]))
+    return (0, 0)
+
+
+def grafico_calibragem_barras(pasta_resultados: Path, saida: Path):
+    """Gráfico de barras da Calibragem Empírica (resultados/calibragem.json), destacando os
+    níveis U1, U2, U3 escolhidos abaixo do teto de 10% e a carga acima do teto."""
+    arq_cal = pasta_resultados / "calibragem.json"
+    if not arq_cal.exists():
+        return
+    cal = json.loads(arq_cal.read_text(encoding="utf-8"))
+    teto = float(cal.get("teto_perda_pct", 10.0))
+    lang_ref = cal.get("linguagem_referencia", "python")
+    niveis_u = [int(u) for u in cal.get("usuarios", [])]
+    medicoes_dict = cal.get("por_linguagem", {}).get(lang_ref, {}).get("medicoes", {})
+    if not medicoes_dict:
+        return
+
+    pontos = sorted((int(u), float(p)) for u, p in medicoes_dict.items())
+    usuarios = [u for u, _ in pontos]
+    pcts = [p for _, p in pontos]
+    mapa_niveis = {u: f"U{idx + 1}" for idx, u in enumerate(niveis_u)}
+
+    cores = []
+    for u, p in pontos:
+        if u in mapa_niveis:
+            cores.append("#eb6834")  # Nível escolhido U1, U2, U3
+        elif p > teto:
+            cores.append("#c0392b")  # Acima do teto de 10%
+        else:
+            cores.append("#2a78d6")  # Sondagem abaixo do teto
+
+    fig, ax = plt.subplots(figsize=TAMANHO_SLIDE)
+    x = np.arange(len(pontos))
+    barras = ax.bar(x, pcts, width=0.62, color=cores, edgecolor="white", linewidth=1.0, zorder=3)
+
+    max_y = max(teto * 1.4, max(pcts, default=teto) * 1.20)
+    for barra, (u, p) in zip(barras, pontos):
+        falhas, total = _ler_falhas_calibragem(pasta_resultados, lang_ref, u)
+        detalhe = f"\n({falhas}/{total})" if total > 0 else ""
+        texto = f"{formatar(p)}%{detalhe}"
+        ax.annotate(
+            texto,
+            (barra.get_x() + barra.get_width() / 2.0, barra.get_height()),
+            ha="center",
+            va="bottom",
+            fontsize=9.2,
+            fontweight="bold",
+            xytext=(0, 4),
+            textcoords="offset points",
+        )
+
+    ax.axhline(teto, color="#c0392b", linestyle="--", linewidth=2.2, zorder=2)
+    ax.axhspan(teto, max_y, color="#c0392b", alpha=0.06, zorder=1)
+    ax.annotate(
+        f"Teto Máximo de Perda Exigido pelo Professor: {teto:.0f}%",
+        (0.05, teto),
+        xytext=(4, 7),
+        textcoords="offset points",
+        color="#c0392b",
+        fontsize=11.5,
+        fontweight="bold",
+    )
+
+    rotulos_x = [f"{u} usuários\n({mapa_niveis[u]})" if u in mapa_niveis else f"{u} usuários" for u in usuarios]
+    ax.set_xticks(x)
+    ax.set_xticklabels(rotulos_x)
+    ax.set_ylim(0, max_y)
+    ax.set_xlabel(f"Cargas Testadas na Calibragem Empírica ({lang_ref.capitalize()} Sem Cache)")
+    ax.set_ylabel("Taxa de Perda / Falhas (%)")
+    ax.set_title("Link Extractor: Calibragem Empírica em Gráfico de Barras — Escolha de [U1, U2, U3] ≤ 10%")
+
+    legenda_cal = [
+        Patch(facecolor="#2a78d6", label="Carga de sondagem (≤ 10%)"),
+        Patch(facecolor="#eb6834", label="Níveis calibrados escolhidos (U1, U2, U3)"),
+        Patch(facecolor="#c0392b", label="Carga rejeitada (> 10% de perda)"),
+        Line2D([0], [0], color="#c0392b", linestyle="--", linewidth=2.2, label=f"Limite de {teto:.0f}% de perda"),
+    ]
+    fig.tight_layout(rect=(0, 0.05, 1, 1))
+    fig.legend(handles=legenda_cal, loc="lower center", ncol=4, frameon=False, bbox_to_anchor=(0.5, -0.01))
+    salvar(fig, saida / "06_calibragem_barras.png")
 
 
 def main():
@@ -357,6 +614,8 @@ def main():
     grafico_percentis(df, args.saida, log)
     grafico_vazao(df, args.saida)
     grafico_perda(df, args.saida)
+    grafico_falhas_absolutas_e_sucessos(df, args.saida)
+    grafico_calibragem_barras(args.resultados, args.saida)
 
 
 if __name__ == "__main__":

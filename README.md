@@ -241,8 +241,12 @@ Todos os gráficos são gerados automaticamente em `220 DPI` (formato widescreen
    ![Painel Comparativo de Percentis](graficos/02_percentis_painel_comparativo.png)
 3. **Vazão (Requisições por Segundo — RPS):** [`graficos/03_vazao_rps.png`](graficos/03_vazao_rps.png)
    ![Comparativo de Vazão (RPS)](graficos/03_vazao_rps.png)
-4. **Taxa de Perda / Falhas (%) vs. Limite Máximo de 10%:** [`graficos/04_taxa_perda.png`](graficos/04_taxa_perda.png)
+4. **Taxa de Perda / Falhas (%) + Contagem Absoluta vs. Limite Máximo de 10%:** [`graficos/04_taxa_perda.png`](graficos/04_taxa_perda.png)
    ![Taxa de Perda e Teto de 10%](graficos/04_taxa_perda.png)
+5. **Quantidade Absoluta de Falhas e Proporção Sucessos vs. Falhas (Barras Agrupadas e Empilhadas):** [`graficos/05_falhas_absolutas_e_sucessos.png`](graficos/05_falhas_absolutas_e_sucessos.png)
+   ![Quantidade Absoluta de Falhas e Sucessos vs. Falhas](graficos/05_falhas_absolutas_e_sucessos.png)
+6. **Calibragem Empírica em Gráfico de Barras (`[U1, U2, U3]` vs. Teto de 10%):** [`graficos/06_calibragem_barras.png`](graficos/06_calibragem_barras.png)
+   ![Calibragem Empírica em Gráfico de Barras](graficos/06_calibragem_barras.png)
 
 ---
 
